@@ -1,11 +1,14 @@
 /// Deploy orchestrator for Circadian.
 /// Import this file, set your config values, and evaluate to produce
-/// output files for appconfig, k8s, and compose.
+/// output files for k8s and compose.
 module Deploy
 
 import "Config.pkl"
-import "deploy/k8s/K8sDeployment.pkl"
 import "deploy/compose/ComposeStack.pkl"
+
+import "@devops-shared/Web.pkl"
+import "@devops-shared/Gateway.pkl"
+import "@devops-shared/HTTP.pkl"
 
 /// The application configuration. Override with your deployment values.
 appConfig: Config = new Config {
@@ -29,9 +32,39 @@ appConfig: Config = new Config {
   }
 }
 
-/// Kubernetes deployment config. Override namespace, gateway class, etc.
-k8s: K8sDeployment = new K8sDeployment {
-  appConfig = outer.appConfig
+appName: String = "circadian"
+appPort: Int = 80
+
+hidden appLabels = Web.appLabels(appName)
+hidden image = "\(appConfig.image.repository):\(appConfig.image.tag)"
+
+hidden redirectDomains: Listing<String> = if (appConfig.redirects == null) new Listing {}
+  else new Listing {
+    for (from, _ in appConfig.redirects!!) {
+      from
+    }
+  }
+
+hidden allDomains: Listing<String> = new {
+  ...appConfig.domains
+  ...redirectDomains
+}
+
+hidden gw = Gateway.gateway(
+  "circadian-gateway",
+  appConfig.namespace,
+  appConfig.gatewayClassName,
+  appConfig.clusterIssuer,
+  allDomains,
+)
+
+/// All Kubernetes manifests as a single list.
+k8sManifests: Listing = new {
+  Web.namespace(appConfig.namespace)
+  gw
+  Web.service(appName, appConfig.namespace, appPort, appLabels)
+  Web.deployment(appName, appConfig.namespace, image, appConfig.replicas.toInt(), appPort, appLabels)
+  ...HTTP.routes(appName, gw, appConfig.domains, redirectDomains)
 }
 
 /// Compose stack config.
@@ -39,21 +72,6 @@ compose: ComposeStack = new ComposeStack {
   appConfig = outer.appConfig
 }
 
-/// All Kubernetes manifests as a single list.
-/// Evaluate with `pkl eval Deploy.pkl -f k8s.yaml` or pipe to kubectl apply.
-k8sManifests: Listing = new {
-  k8s.namespace()
-  k8s.deployment()
-  k8s.service()
-  k8s.gateway()
-  k8s.httpRoute()
-  k8s.httpRedirectRoute()
-  for (route in k8s.domainRedirectRoutes()) {
-    route
-  }
-}
-
-/// Docker Compose config.
 composeManifest = compose.compose()
 
 /// Output targets — evaluate with `pkl eval -m . Deploy.pkl`

@@ -13,6 +13,5 @@ package {
 }
 
 dependencies {
-  ["k8s"] { uri = "package://pkg.pkl-lang.org/pkl-k8s/k8s@1.4.1" }
-  ["gateway"] { uri = "package://pkg.pkl-lang.org/pkl-pantry/k8s.networking.gateway@1.0.0" }
+  ["devops-shared"] { uri = "package://pkg.pkl-lang.org/github.com/bmurray/devops-shared/deploy@0.2.0" }
 }
