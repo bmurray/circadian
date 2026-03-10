@@ -1,0 +1,263 @@
+export type DstMode = "auto" | "dst" | "standard";
+
+export type CityData = {
+  id: string;
+  name: string;
+  region: string;
+  latitude: number;
+  longitude: number;
+  timezone: string;
+  utcOffsetStandard: number; // hours
+  utcOffsetDst: number; // hours (same as standard if no DST)
+  hasDst: boolean;
+};
+
+/** Get the effective UTC offset for a city given DST mode and day of year */
+export function getEffectiveOffset(
+  city: CityData,
+  dstMode: DstMode,
+  dayOfYear: number,
+): number {
+  if (!city.hasDst) return city.utcOffsetStandard;
+  if (dstMode === "standard") return city.utcOffsetStandard;
+  if (dstMode === "dst") return city.utcOffsetDst;
+  // Auto: approximate DST as March second Sunday to November first Sunday (North America)
+  // This is a simplification — real DST varies by region
+  return isDstActive(dayOfYear) ? city.utcOffsetDst : city.utcOffsetStandard;
+}
+
+/** Approximate North American DST: roughly day 70-310 (second Sunday March to first Sunday Nov) */
+function isDstActive(dayOfYear: number): boolean {
+  return dayOfYear >= 70 && dayOfYear <= 310;
+}
+
+export const ALL_CITIES: CityData[] = [
+  {
+    id: "edmonton",
+    name: "Edmonton",
+    region: "AB",
+    latitude: 53.5461,
+    longitude: -113.4937,
+    timezone: "America/Edmonton",
+    utcOffsetStandard: -7,
+    utcOffsetDst: -6,
+    hasDst: true,
+  },
+  {
+    id: "toronto",
+    name: "Toronto",
+    region: "ON",
+    latitude: 43.6532,
+    longitude: -79.3832,
+    timezone: "America/Toronto",
+    utcOffsetStandard: -5,
+    utcOffsetDst: -4,
+    hasDst: true,
+  },
+  {
+    id: "new-york",
+    name: "New York",
+    region: "NY",
+    latitude: 40.7128,
+    longitude: -74.006,
+    timezone: "America/New_York",
+    utcOffsetStandard: -5,
+    utcOffsetDst: -4,
+    hasDst: true,
+  },
+  {
+    id: "los-angeles",
+    name: "Los Angeles",
+    region: "CA",
+    latitude: 34.0522,
+    longitude: -118.2437,
+    timezone: "America/Los_Angeles",
+    utcOffsetStandard: -8,
+    utcOffsetDst: -7,
+    hasDst: true,
+  },
+  {
+    id: "dallas",
+    name: "Dallas",
+    region: "TX",
+    latitude: 32.7767,
+    longitude: -96.797,
+    timezone: "America/Chicago",
+    utcOffsetStandard: -6,
+    utcOffsetDst: -5,
+    hasDst: true,
+  },
+  {
+    id: "london",
+    name: "London",
+    region: "UK",
+    latitude: 51.5074,
+    longitude: -0.1278,
+    timezone: "Europe/London",
+    utcOffsetStandard: 0,
+    utcOffsetDst: 1,
+    hasDst: true,
+  },
+  {
+    id: "paris",
+    name: "Paris",
+    region: "FR",
+    latitude: 48.8566,
+    longitude: 2.3522,
+    timezone: "Europe/Paris",
+    utcOffsetStandard: 1,
+    utcOffsetDst: 2,
+    hasDst: true,
+  },
+  {
+    id: "tokyo",
+    name: "Tokyo",
+    region: "JP",
+    latitude: 35.6762,
+    longitude: 139.6503,
+    timezone: "Asia/Tokyo",
+    utcOffsetStandard: 9,
+    utcOffsetDst: 9,
+    hasDst: false,
+  },
+  {
+    id: "sydney",
+    name: "Sydney",
+    region: "AU",
+    latitude: -33.8688,
+    longitude: 151.2093,
+    timezone: "Australia/Sydney",
+    utcOffsetStandard: 10,
+    utcOffsetDst: 11,
+    hasDst: true,
+  },
+  {
+    id: "mumbai",
+    name: "Mumbai",
+    region: "IN",
+    latitude: 19.076,
+    longitude: 72.8777,
+    timezone: "Asia/Kolkata",
+    utcOffsetStandard: 5.5,
+    utcOffsetDst: 5.5,
+    hasDst: false,
+  },
+  {
+    id: "vancouver",
+    name: "Vancouver",
+    region: "BC",
+    latitude: 49.2827,
+    longitude: -123.1207,
+    timezone: "America/Vancouver",
+    utcOffsetStandard: -8,
+    utcOffsetDst: -7,
+    hasDst: true,
+  },
+  {
+    id: "chicago",
+    name: "Chicago",
+    region: "IL",
+    latitude: 41.8781,
+    longitude: -87.6298,
+    timezone: "America/Chicago",
+    utcOffsetStandard: -6,
+    utcOffsetDst: -5,
+    hasDst: true,
+  },
+  {
+    id: "denver",
+    name: "Denver",
+    region: "CO",
+    latitude: 39.7392,
+    longitude: -104.9903,
+    timezone: "America/Denver",
+    utcOffsetStandard: -7,
+    utcOffsetDst: -6,
+    hasDst: true,
+  },
+  {
+    id: "berlin",
+    name: "Berlin",
+    region: "DE",
+    latitude: 52.52,
+    longitude: 13.405,
+    timezone: "Europe/Berlin",
+    utcOffsetStandard: 1,
+    utcOffsetDst: 2,
+    hasDst: true,
+  },
+  {
+    id: "dubai",
+    name: "Dubai",
+    region: "AE",
+    latitude: 25.2048,
+    longitude: 55.2708,
+    timezone: "Asia/Dubai",
+    utcOffsetStandard: 4,
+    utcOffsetDst: 4,
+    hasDst: false,
+  },
+  {
+    id: "singapore",
+    name: "Singapore",
+    region: "SG",
+    latitude: 1.3521,
+    longitude: 103.8198,
+    timezone: "Asia/Singapore",
+    utcOffsetStandard: 8,
+    utcOffsetDst: 8,
+    hasDst: false,
+  },
+  {
+    id: "sao-paulo",
+    name: "São Paulo",
+    region: "BR",
+    latitude: -23.5505,
+    longitude: -46.6333,
+    timezone: "America/Sao_Paulo",
+    utcOffsetStandard: -3,
+    utcOffsetDst: -3,
+    hasDst: false,
+  },
+  {
+    id: "honolulu",
+    name: "Honolulu",
+    region: "HI",
+    latitude: 21.3069,
+    longitude: -157.8583,
+    timezone: "Pacific/Honolulu",
+    utcOffsetStandard: -10,
+    utcOffsetDst: -10,
+    hasDst: false,
+  },
+  {
+    id: "anchorage",
+    name: "Anchorage",
+    region: "AK",
+    latitude: 61.2181,
+    longitude: -149.9003,
+    timezone: "America/Anchorage",
+    utcOffsetStandard: -9,
+    utcOffsetDst: -8,
+    hasDst: true,
+  },
+  {
+    id: "phoenix",
+    name: "Phoenix",
+    region: "AZ",
+    latitude: 33.4484,
+    longitude: -112.074,
+    timezone: "America/Phoenix",
+    utcOffsetStandard: -7,
+    utcOffsetDst: -7,
+    hasDst: false,
+  },
+];
+
+export const DEFAULT_CITY_IDS = [
+  "edmonton",
+  "toronto",
+  "new-york",
+  "los-angeles",
+  "dallas",
+];
