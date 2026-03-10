@@ -39,33 +39,33 @@ compose: ComposeStack = new ComposeStack {
   appConfig = outer.appConfig
 }
 
+/// All Kubernetes manifests as a single list.
+/// Evaluate with `pkl eval Deploy.pkl -f k8s.yaml` or pipe to kubectl apply.
+k8sManifests: Listing = new {
+  k8s.namespace()
+  k8s.deployment()
+  k8s.service()
+  k8s.gateway()
+  k8s.httpRoute()
+  k8s.httpRedirectRoute()
+  for (route in k8s.domainRedirectRoutes()) {
+    route
+  }
+}
+
+/// Docker Compose config.
+composeManifest = compose.compose()
+
 /// Output targets — evaluate with `pkl eval -m . Deploy.pkl`
-/// to write each file to its respective path.
 output {
   files {
-    ["k8s/deployment.yaml"] {
-      renderer = new YamlRenderer {}
-      value = k8s.deployment()
-    }
-    ["k8s/service.yaml"] {
-      renderer = new YamlRenderer {}
-      value = k8s.service()
-    }
-    ["k8s/gateway.yaml"] {
-      renderer = new YamlRenderer {}
-      value = k8s.gateway()
-    }
-    ["k8s/httproute.yaml"] {
-      renderer = new YamlRenderer {}
-      value = k8s.httpRoute()
-    }
-    ["k8s/http-redirect.yaml"] {
-      renderer = new YamlRenderer {}
-      value = k8s.httpRedirectRoute()
+    ["k8s/manifests.yaml"] {
+      renderer = new YamlRenderer { isStream = true }
+      value = k8sManifests
     }
     ["compose/docker-compose.yaml"] {
       renderer = new YamlRenderer {}
-      value = compose.compose()
+      value = composeManifest
     }
   }
 }

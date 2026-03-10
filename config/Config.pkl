@@ -21,6 +21,9 @@ resources: Resources
 /// Number of replicas.
 replicas: UInt = 1
 
+/// Namespace to create on deployment.
+namespace: String = "circadian"
+
 class Image {
   /// Container registry + repository (e.g., "ghcr.io/bmurray/circadian").
   repository: String

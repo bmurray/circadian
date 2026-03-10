@@ -4,6 +4,7 @@ module K8sDeployment
 
 import "../../Config.pkl"
 
+import "@k8s/api/core/v1/Namespace.pkl"
 import "@k8s/api/apps/v1/Deployment.pkl"
 import "@k8s/api/core/v1/Service.pkl"
 import "@k8s/api/core/v1/PodSpec.pkl"
@@ -20,7 +21,7 @@ import "@gateway/v1/HTTPRoute.pkl"
 appConfig: Config
 
 /// Kubernetes namespace.
-namespace: String = "default"
+namespace: String = appConfig.namespace
 
 /// Gateway class name for the Gateway API resource.
 gatewayClassName: String = "default"
@@ -39,6 +40,14 @@ local _labels: Mapping<String, String> = new {
 local _namespace = namespace
 local _gatewayClassName = gatewayClassName
 local _appConfig = appConfig
+
+/// Generate the Namespace manifest.
+function namespace(): Namespace = new {
+  metadata {
+    name = _namespace
+    labels = _labels
+  }
+}
 
 /// Generate the Deployment manifest.
 function deployment(): Deployment = new {
