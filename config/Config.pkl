@@ -27,6 +27,9 @@ namespace: String = "circadian"
 /// Gateway class name for the Gateway API resource.
 gatewayClassName: String = "traefik"
 
+/// cert-manager cluster issuer name.
+clusterIssuer: String = "letsencrypt-prod"
+
 class Image {
   /// Container registry + repository (e.g., "ghcr.io/bmurray/circadian").
   repository: String

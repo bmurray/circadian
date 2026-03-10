@@ -134,6 +134,9 @@ function gateway(): Gateway = new {
   metadata {
     name = "circadian-gateway"
     namespace = _namespace
+    annotations {
+      ["cert-manager.io/cluster-issuer"] = _appConfig.clusterIssuer
+    }
   }
   spec {
     gatewayClassName = _gatewayClassName
