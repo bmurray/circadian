@@ -323,3 +323,19 @@
   background: var(--work-zone);
   pointer-events: none;
 }
+
+/* World map */
+.world-map {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem;
+  overflow: hidden;
+}
+
+.world-map__canvas {
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: 3px;
+}

@@ -3,6 +3,7 @@ import { DaySlider } from "./components/DaySlider";
 import { DstToggle } from "./components/DstToggle";
 import { CitySelector } from "./components/CitySelector";
 import { Timeline } from "./components/Timeline";
+import { WorldMap } from "./components/WorldMap";
 import { useSunTimes } from "./hooks/useSunTimes";
 import { dayOfYear } from "./lib/sun";
 import { ALL_CITIES, DEFAULT_CITY_IDS, type CityData, type DstMode } from "./lib/cities";
@@ -51,6 +52,7 @@ export default function App() {
         onRemove={handleRemoveCity}
       />
       <Timeline sunTimes={sunTimes} />
+      <WorldMap dayOfYear={day} cities={selectedCities} />
     </div>
   );
 }

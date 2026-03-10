@@ -68,6 +68,85 @@ export function dayOfYear(date: Date): number {
   return Math.floor(diff / (1000 * 60 * 60 * 24));
 }
 
+/** Solar gamma angle for a given day of year */
+function gamma(dayOfYear: number): number {
+  return ((2 * Math.PI) / 365) * (dayOfYear - 1);
+}
+
+/** Solar declination in radians for a given day of year (Spencer, 1971) */
+export function solarDeclination(dayOfYear: number): number {
+  const g = gamma(dayOfYear);
+  return (
+    0.006918 -
+    0.399912 * Math.cos(g) +
+    0.070257 * Math.sin(g) -
+    0.006758 * Math.cos(2 * g) +
+    0.000907 * Math.sin(2 * g) -
+    0.002697 * Math.cos(3 * g) +
+    0.00148 * Math.sin(3 * g)
+  );
+}
+
+/** Equation of time in minutes for a given day of year */
+export function equationOfTime(dayOfYear: number): number {
+  const g = gamma(dayOfYear);
+  return (
+    229.18 *
+    (0.000075 +
+      0.001868 * Math.cos(g) -
+      0.032077 * Math.sin(g) -
+      0.014615 * Math.cos(2 * g) -
+      0.04089 * Math.sin(2 * g))
+  );
+}
+
+/** Compute the terminator latitude for each longitude.
+ *  Returns array of {lat, lon} points tracing the day/night boundary.
+ *  utcHours is fractional hours (e.g. 14.5 for 2:30 PM UTC). */
+export function terminatorPoints(
+  day: number,
+  utcHours: number,
+  numPoints: number = 360,
+): { lat: number; lon: number }[] {
+  const decl = solarDeclination(day);
+  const eqt = equationOfTime(day);
+  const subsolarLon = -(15 * (utcHours + eqt / 60 - 12));
+
+  const points: { lat: number; lon: number }[] = [];
+  for (let i = 0; i <= numPoints; i++) {
+    const lon = -180 + (360 * i) / numPoints;
+    const hourAngle = (lon - subsolarLon) * DEG;
+    const tanDecl = Math.tan(decl);
+    let lat: number;
+    if (Math.abs(tanDecl) < 1e-10) {
+      lat = hourAngle >= 0 ? 90 : -90;
+    } else {
+      lat = Math.atan(-Math.cos(hourAngle) / tanDecl) * RAD;
+    }
+    points.push({ lat, lon });
+  }
+  return points;
+}
+
+/** Returns true if a point is on the night side of the terminator */
+export function isNightSide(
+  day: number,
+  utcHours: number,
+  latitude: number,
+  longitude: number,
+): boolean {
+  const decl = solarDeclination(day);
+  const eqt = equationOfTime(day);
+  const subsolarLon = -(15 * (utcHours + eqt / 60 - 12));
+  const hourAngle = (longitude - subsolarLon) * DEG;
+  const solarElevation =
+    Math.asin(
+      Math.sin(latitude * DEG) * Math.sin(decl) +
+        Math.cos(latitude * DEG) * Math.cos(decl) * Math.cos(hourAngle),
+    ) * RAD;
+  return solarElevation < 0;
+}
+
 /** Format fractional hours (e.g. 6.5) to "6:30 AM" */
 export function formatTime(hours: number): string {
   const h = Math.floor(hours);
