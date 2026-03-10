@@ -147,6 +147,7 @@ function gateway(): Gateway = new {
           certificateRefs {
             new {
               name = "circadian-tls"
+              kind = "Secret"
             }
           }
         }
