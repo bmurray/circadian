@@ -24,7 +24,7 @@ appConfig: Config
 namespace: String = appConfig.namespace
 
 /// Gateway class name for the Gateway API resource.
-gatewayClassName: String = "default"
+gatewayClassName: String = appConfig.gatewayClassName
 
 /// Whether to create TLS certificate resources (e.g., cert-manager).
 tlsEnabled: Boolean = true
@@ -141,7 +141,7 @@ function gateway(): Gateway = new {
       new {
         name = "https"
         protocol = "HTTPS"
-        port = 443
+        port = 8443
         tls {
           mode = "Terminate"
           certificateRefs {
@@ -159,7 +159,7 @@ function gateway(): Gateway = new {
       new {
         name = "http-redirect"
         protocol = "HTTP"
-        port = 80
+        port = 8000
         allowedRoutes {
           namespaces {
             from = "Same"

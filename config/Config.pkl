@@ -24,6 +24,9 @@ replicas: UInt = 1
 /// Namespace to create on deployment.
 namespace: String = "circadian"
 
+/// Gateway class name for the Gateway API resource.
+gatewayClassName: String = "traefik"
+
 class Image {
   /// Container registry + repository (e.g., "ghcr.io/bmurray/circadian").
   repository: String
