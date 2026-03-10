@@ -1,0 +1,48 @@
+/// Docker Compose schema for Circadian.
+module ComposeStack
+
+import "../../Config.pkl"
+
+/// The application configuration.
+appConfig: Config
+
+/// Host port to bind to.
+hostPort: UInt = 8080
+
+/// Generate the compose file as a Mapping.
+function compose() = new Mapping {
+  ["services"] = new Mapping {
+    ["circadian"] = new Mapping {
+      ["image"] = "\(appConfig.image.repository):\(appConfig.image.tag)"
+      ["ports"] = new Listing {
+        "\(hostPort):80"
+      }
+      ["restart"] = "unless-stopped"
+      ["healthcheck"] = new Mapping {
+        ["test"] = new Listing {
+          "CMD"
+          "wget"
+          "-q"
+          "--spider"
+          "http://localhost/"
+        }
+        ["interval"] = "30s"
+        ["timeout"] = "3s"
+        ["start_period"] = "5s"
+        ["retries"] = 3
+      }
+      ["deploy"] = new Mapping {
+        ["resources"] = new Mapping {
+          ["limits"] = new Mapping {
+            ["cpus"] = appConfig.resources.limits.cpu
+            ["memory"] = appConfig.resources.limits.memory
+          }
+          ["reservations"] = new Mapping {
+            ["cpus"] = appConfig.resources.requests.cpu
+            ["memory"] = appConfig.resources.requests.memory
+          }
+        }
+      }
+    }
+  }
+}

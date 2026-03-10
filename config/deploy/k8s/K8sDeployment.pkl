@@ -1,0 +1,256 @@
+/// Kubernetes deployment schema for Circadian.
+/// Uses Gateway API (not Ingress) with typed pkl-k8s and pkl-pantry schemas.
+module K8sDeployment
+
+import "../../Config.pkl"
+
+import "@k8s/api/apps/v1/Deployment.pkl"
+import "@k8s/api/core/v1/Service.pkl"
+import "@k8s/api/core/v1/PodSpec.pkl"
+import "@k8s/api/core/v1/ContainerPort.pkl"
+import "@k8s/api/core/v1/ResourceRequirements.pkl"
+import "@k8s/api/core/v1/Probe.pkl"
+import "@k8s/api/core/v1/HTTPGetAction.pkl"
+import "@k8s/apimachinery/pkg/apis/meta/v1/LabelSelector.pkl"
+
+import "@gateway/v1/Gateway.pkl"
+import "@gateway/v1/HTTPRoute.pkl"
+
+/// The application configuration to deploy from.
+appConfig: Config
+
+/// Kubernetes namespace.
+namespace: String = "default"
+
+/// Gateway class name for the Gateway API resource.
+gatewayClassName: String = "default"
+
+/// Whether to create TLS certificate resources (e.g., cert-manager).
+tlsEnabled: Boolean = true
+
+/// TLS issuer name (for cert-manager).
+tlsIssuerName: String = "letsencrypt-prod"
+
+local _labels: Mapping<String, String> = new {
+  ["app.kubernetes.io/name"] = "circadian"
+  ["app.kubernetes.io/managed-by"] = "pkl"
+}
+
+local _namespace = namespace
+local _gatewayClassName = gatewayClassName
+local _appConfig = appConfig
+
+/// Generate the Deployment manifest.
+function deployment(): Deployment = new {
+  metadata {
+    name = "circadian"
+    namespace = _namespace
+    labels = _labels
+  }
+  spec {
+    replicas = _appConfig.replicas.toInt()
+    selector = new LabelSelector {
+      matchLabels = _labels
+    }
+    template {
+      metadata {
+        labels = _labels
+      }
+      spec {
+        containers {
+          new {
+            name = "circadian"
+            image = "\(_appConfig.image.repository):\(_appConfig.image.tag)"
+            ports {
+              new ContainerPort {
+                containerPort = 80
+                name = "http"
+              }
+            }
+            resources = new ResourceRequirements {
+              requests {
+                ["cpu"] = _appConfig.resources.requests.cpu
+                ["memory"] = _appConfig.resources.requests.memory
+              }
+              limits {
+                ["cpu"] = _appConfig.resources.limits.cpu
+                ["memory"] = _appConfig.resources.limits.memory
+              }
+            }
+            livenessProbe = new Probe {
+              httpGet = new HTTPGetAction {
+                path = "/"
+                port = "http"
+              }
+              initialDelaySeconds = 5
+              periodSeconds = 30
+            }
+            readinessProbe = new Probe {
+              httpGet = new HTTPGetAction {
+                path = "/"
+                port = "http"
+              }
+              initialDelaySeconds = 3
+              periodSeconds = 10
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+/// Generate the Service manifest.
+function service(): Service = new {
+  metadata {
+    name = "circadian"
+    namespace = _namespace
+    labels = _labels
+  }
+  spec {
+    selector = _labels
+    ports {
+      new {
+        port = 80
+        targetPort = "http"
+        protocol = "TCP"
+        name = "http"
+      }
+    }
+  }
+}
+
+/// Generate Gateway resource.
+function gateway(): Gateway = new {
+  metadata {
+    name = "circadian-gateway"
+    namespace = _namespace
+  }
+  spec {
+    gatewayClassName = _gatewayClassName
+    listeners {
+      new {
+        name = "https"
+        protocol = "HTTPS"
+        port = 443
+        tls {
+          mode = "Terminate"
+          certificateRefs {
+            new {
+              name = "circadian-tls"
+            }
+          }
+        }
+        allowedRoutes {
+          namespaces {
+            from = "Same"
+          }
+        }
+      }
+      new {
+        name = "http-redirect"
+        protocol = "HTTP"
+        port = 80
+        allowedRoutes {
+          namespaces {
+            from = "Same"
+          }
+        }
+      }
+    }
+  }
+}
+
+/// Generate HTTPRoute for Gateway API.
+function httpRoute(): HTTPRoute = new {
+  metadata {
+    name = "circadian"
+    namespace = _namespace
+  }
+  spec {
+    parentRefs {
+      new {
+        name = "circadian-gateway"
+        namespace = _namespace
+      }
+    }
+    hostnames = _appConfig.domains
+    rules {
+      new {
+        backendRefs {
+          new {
+            name = "circadian"
+            port = 80
+          }
+        }
+      }
+    }
+  }
+}
+
+/// Generate HTTP-to-HTTPS redirect route.
+function httpRedirectRoute(): HTTPRoute = new {
+  metadata {
+    name = "circadian-http-redirect"
+    namespace = _namespace
+  }
+  spec {
+    parentRefs {
+      new {
+        name = "circadian-gateway"
+        namespace = _namespace
+        sectionName = "http-redirect"
+      }
+    }
+    hostnames = _appConfig.domains
+    rules {
+      new {
+        filters {
+          new {
+            type = "RequestRedirect"
+            requestRedirect {
+              scheme = "https"
+              statusCode = 301
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+/// Generate domain redirect routes (e.g., www -> apex).
+function domainRedirectRoutes(): Listing<HTTPRoute> =
+  if (_appConfig.redirects == null) new Listing {}
+  else new Listing {
+    for (from, to in _appConfig.redirects!!) {
+      new HTTPRoute {
+        metadata {
+          name = "circadian-redirect-\(from.replaceAll(".", "-"))"
+          namespace = _namespace
+        }
+        spec {
+          parentRefs {
+            new {
+              name = "circadian-gateway"
+              namespace = _namespace
+            }
+          }
+          hostnames { from }
+          rules {
+            new {
+              filters {
+                new {
+                  type = "RequestRedirect"
+                  requestRedirect {
+                    hostname = to
+                    statusCode = 301
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }

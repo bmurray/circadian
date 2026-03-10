@@ -24,6 +24,21 @@ timezoner/
 ├── CLAUDE.md
 ├── TECH.md                          # Full tech stack conventions
 ├── Makefile
+├── Dockerfile                       # Multi-stage: bun build -> nginx
+├── nginx.conf                       # SPA-aware nginx config
+├── config/
+│   ├── PklProject                   # Pkl package definition
+│   ├── Config.pkl                # Main config schema (image, domains, resources)
+│   ├── Deploy.pkl                   # Orchestrator: outputs k8s + compose files
+│   └── deploy/
+│       ├── k8s/
+│       │   └── K8sDeployment.pkl    # K8s manifests (Gateway API, Deployment, Service)
+│       └── compose/
+│           └── ComposeStack.pkl     # Docker Compose stack
+├── .github/workflows/
+│   ├── ci.yml                       # Lint + build on every push/PR
+│   ├── release.yml                  # Docker image on vX.Y.Z tags (amd64 + arm64)
+│   └── config-release.yml           # Pkl config package on config@X.Y.Z tags
 └── web/                             # React frontend (Vite + Bun + TypeScript)
     ├── package.json
     ├── bun.lock

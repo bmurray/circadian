@@ -1,0 +1,48 @@
+/// Configuration schema for the Circadian application.
+/// This is a static SPA served by nginx, so configuration
+/// primarily controls deployment behavior.
+module Config
+
+/// The container image to deploy.
+image: Image
+
+/// Domain names the application listens on.
+domains: Listing<String>
+
+/// Optional domain redirects (e.g., www.example.com -> example.com).
+redirects: Mapping<String, String>?
+
+/// Nginx configuration overrides.
+nginx: NginxConfig
+
+/// Resource limits for the container.
+resources: Resources
+
+/// Number of replicas.
+replicas: UInt = 1
+
+class Image {
+  /// Container registry + repository (e.g., "ghcr.io/bmurray/circadian").
+  repository: String
+  /// Image tag.
+  tag: String = "latest"
+}
+
+class NginxConfig {
+  /// Whether gzip compression is enabled.
+  gzip: Boolean = true
+  /// Max client body size.
+  clientMaxBodySize: String = "1m"
+  /// Custom server block directives appended to the config.
+  extraDirectives: Listing<String>?
+}
+
+class Resources {
+  requests: ResourceSpec
+  limits: ResourceSpec
+}
+
+class ResourceSpec {
+  cpu: String
+  memory: String
+}

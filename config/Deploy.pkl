@@ -1,0 +1,71 @@
+/// Deploy orchestrator for Circadian.
+/// Import this file, set your config values, and evaluate to produce
+/// output files for appconfig, k8s, and compose.
+module Deploy
+
+import "Config.pkl"
+import "deploy/k8s/K8sDeployment.pkl"
+import "deploy/compose/ComposeStack.pkl"
+
+/// The application configuration. Override with your deployment values.
+appConfig: Config = new Config {
+  image {
+    repository = "ghcr.io/bmurray/circadian"
+    tag = "latest"
+  }
+  domains {
+    "circadian.example.com"
+  }
+  nginx {}
+  resources {
+    requests {
+      cpu = "50m"
+      memory = "32Mi"
+    }
+    limits {
+      cpu = "200m"
+      memory = "64Mi"
+    }
+  }
+}
+
+/// Kubernetes deployment config. Override namespace, gateway class, etc.
+k8s: K8sDeployment = new K8sDeployment {
+  appConfig = outer.appConfig
+}
+
+/// Compose stack config.
+compose: ComposeStack = new ComposeStack {
+  appConfig = outer.appConfig
+}
+
+/// Output targets — evaluate with `pkl eval -m . Deploy.pkl`
+/// to write each file to its respective path.
+output {
+  files {
+    ["k8s/deployment.yaml"] {
+      renderer = new YamlRenderer {}
+      value = k8s.deployment()
+    }
+    ["k8s/service.yaml"] {
+      renderer = new YamlRenderer {}
+      value = k8s.service()
+    }
+    ["k8s/gateway.yaml"] {
+      renderer = new YamlRenderer {}
+      value = k8s.gateway()
+    }
+    ["k8s/httproute.yaml"] {
+      renderer = new YamlRenderer {}
+      value = k8s.httpRoute()
+    }
+    ["k8s/http-redirect.yaml"] {
+      renderer = new YamlRenderer {}
+      value = k8s.httpRedirectRoute()
+    }
+    ["compose/docker-compose.yaml"] {
+      renderer = new YamlRenderer {}
+      value = compose.compose()
+    }
+  }
+}

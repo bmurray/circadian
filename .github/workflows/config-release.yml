@@ -1,0 +1,51 @@
+name: Config Release
+
+on:
+  push:
+    tags:
+      - "config@*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  publish-config:
+    runs-on: ubuntu-latest
+    if: github.ref_type == 'tag' && startsWith(github.ref_name, 'config@')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate tag is on main
+        run: |
+          git fetch origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "::error::Config release tags must be on the main branch"
+            exit 1
+          fi
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#config@}" >> "$GITHUB_OUTPUT"
+
+      - name: Install pkl
+        run: |
+          curl -L -o pkl https://github.com/apple/pkl/releases/latest/download/pkl-linux-amd64
+          chmod +x pkl
+          sudo mv pkl /usr/local/bin/
+
+      - name: Update PklProject version
+        run: |
+          cd config
+          sed -i "s/version = \".*\"/version = \"${{ steps.version.outputs.version }}\"/" PklProject
+
+      - name: Package config
+        run: |
+          cd config
+          pkl project package --output-path ../dist/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "Config ${{ steps.version.outputs.version }}"
+          files: dist/*
