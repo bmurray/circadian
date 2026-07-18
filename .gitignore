@@ -3,3 +3,8 @@ dist/
 *.local
 .vite/
 TECH.md
+.DS_Store
+PklProject.deps.json
+!schema/PklProject.deps.json
+!configs/PklProject.deps.json
+!config/PklProject.deps.json

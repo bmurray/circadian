@@ -1,0 +1,17 @@
+amends "pkl:Project"
+
+package {
+  name = "configs"
+  baseUri = "package://localhost:0/circadian/configs"
+  version = "0.1.0"
+  packageZipUrl = "https://localhost:0/configs@\(version).zip"
+  description = "Renderable deploy configs for circadian"
+  authors {
+    "Brian Murray <brian@bmurray.ca>"
+  }
+  license = "MIT"
+}
+
+dependencies {
+  ["schema"] = import("../schema/PklProject")
+}

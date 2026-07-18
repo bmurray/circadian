@@ -1,0 +1,14 @@
+/// Production deploy config for circadian.
+/// Requires env VERSION (image tag) from a v* release tag.
+amends "@schema/Config.pkl"
+
+version = read("env:VERSION")
+
+// Live site today (circadian.app is a parking lander).
+domains {
+  "circadian.bmurray.ca"
+}
+
+redirectDomains {
+  "www.circadian.bmurray.ca"
+}

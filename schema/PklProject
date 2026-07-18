@@ -1,0 +1,22 @@
+amends "pkl:Project"
+
+package {
+  name = "schema"
+  baseUri = "package://localhost:0/circadian/schema"
+  version = "0.1.0"
+  packageZipUrl = "https://localhost:0/schema@\(version).zip"
+  description = "Pkl deployment schema for circadian (evaluate via configs/, not directly)"
+  authors {
+    "Brian Murray <brian@bmurray.ca>"
+  }
+  license = "MIT"
+}
+
+dependencies {
+  ["k8s"] {
+    uri = "package://pkg.pkl-lang.org/pkl-k8s/k8s@1.3.0"
+  }
+  ["gateway-api"] {
+    uri = "package://pkg.pkl-lang.org/pkl-pantry/k8s.networking.gateway@1.0.0"
+  }
+}

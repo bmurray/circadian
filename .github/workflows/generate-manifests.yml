@@ -1,0 +1,46 @@
+name: Generate Manifests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Pkl
+        uses: pkl-community/setup-pkl@v0
+        with:
+          pkl-version: "0.32.0"
+
+      - name: Resolve version
+        run: |
+          VERSION="sha-${GITHUB_SHA::12}"
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+
+      - name: Resolve project dependencies
+        run: |
+          pkl project resolve schema
+          pkl project resolve configs
+
+      - name: Generate manifests
+        env:
+          VERSION: ${{ env.VERSION }}
+        run: |
+          mkdir -p dist
+          pkl eval --project-dir configs configs/prod.pkl > dist/manifests.yaml
+          python3 -c "from pathlib import Path; Path('dist/kustomization.yaml').write_text('apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\nresources:\n  - manifests.yaml\n')"
+          grep -E 'image:|hostname:' dist/manifests.yaml || true
+          test -s dist/manifests.yaml
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: manifests-${{ env.VERSION }}
+          path: dist/
+          if-no-files-found: error

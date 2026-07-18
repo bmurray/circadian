@@ -9,6 +9,11 @@ permissions:
   contents: read
   packages: write
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: bmurray/circadian
+  MANIFESTS_NAME: bmurray/circadian-manifests
+
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
@@ -61,3 +66,73 @@ jobs:
             ghcr.io/bmurray/circadian:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  manifests:
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: ver
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "VERSION=${VERSION}" >> "$GITHUB_ENV"
+          test -n "${VERSION}" || { echo "VERSION empty"; exit 1; }
+
+      - name: Setup Pkl
+        uses: pkl-community/setup-pkl@v0
+        with:
+          pkl-version: "0.32.0"
+
+      - name: Setup Flux CLI
+        uses: fluxcd/flux2/action@v2.6.4
+
+      - name: Resolve project dependencies
+        run: |
+          pkl project resolve schema
+          pkl project resolve configs
+
+      - name: Generate manifests
+        env:
+          VERSION: ${{ env.VERSION }}
+        run: |
+          mkdir -p dist
+          pkl eval --project-dir configs configs/prod.pkl > dist/manifests.yaml
+          python3 -c "from pathlib import Path; Path('dist/kustomization.yaml').write_text('apiVersion: kustomize.config.k8s.io/v1beta1\nkind: Kustomization\nresources:\n  - manifests.yaml\n')"
+          echo "---- image pin ----"
+          grep -E '^\s+image:' dist/manifests.yaml
+          ls -la dist/
+          cat dist/kustomization.yaml
+          test -s dist/manifests.yaml
+          test -s dist/kustomization.yaml
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push Flux OCI artifact
+        env:
+          VERSION: ${{ env.VERSION }}
+        run: |
+          ARTIFACT_URL="${REGISTRY}/${MANIFESTS_NAME}"
+          echo "Pushing oci://${ARTIFACT_URL}:${VERSION}"
+          flux push artifact "oci://${ARTIFACT_URL}:${VERSION}" \
+            --path=./dist \
+            --source="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}" \
+            --revision="${VERSION}@sha1:${GITHUB_SHA}" \
+            --annotations="org.opencontainers.image.version=${VERSION}" \
+            --annotations="org.opencontainers.image.revision=${GITHUB_SHA}" \
+            --annotations="org.opencontainers.image.source=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}"
+          echo "Pushed Flux OCI artifact: oci://${ARTIFACT_URL}:${VERSION}"
+
+      - name: Upload manifests
+        uses: actions/upload-artifact@v4
+        with:
+          name: manifests-${{ steps.ver.outputs.version }}
+          path: dist/
+          if-no-files-found: error
